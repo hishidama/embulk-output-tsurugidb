@@ -230,7 +230,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
 
     private static final Map<InsertMethodSub, String> INSERT_INSTRUCTION = Map.of( //
             InsertMethodSub.INSERT, "INSERT", //
-            InsertMethodSub.INSERT_OR_REPLACE, "INSERT OR REPLACE");
+            InsertMethodSub.INSERT_OR_REPLACE, "INSERT OR REPLACE", //
+            InsertMethodSub.INSERT_IF_NOT_EXISTS, "INSERT IF NOT EXISTS");
 
     protected String getInsertInstruction() {
         var option = task.getInsertMethodSub().orElse(InsertMethodSub.INSERT);

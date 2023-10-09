@@ -56,9 +56,7 @@ public class MethodOptionTest extends TsurugiTestTool {
         var e = assertThrows(PartialExecutionException.class, () -> {
             test("insert", null);
         });
-        var c = (ServerRuntimeException) e.getCause();
-        var u = (UniqueConstraintViolationException) c.getCause();
-        assertEquals(SqlServiceCode.UNIQUE_CONSTRAINT_VIOLATION_EXCEPTION, u.getDiagnosticCode());
+        assertInsert(e);
     }
 
     @Test
@@ -66,6 +64,10 @@ public class MethodOptionTest extends TsurugiTestTool {
         var e = assertThrows(PartialExecutionException.class, () -> {
             test("insert", "insert");
         });
+        assertInsert(e);
+    }
+
+    private void assertInsert(PartialExecutionException e) {
         var c = (ServerRuntimeException) e.getCause();
         var u = (UniqueConstraintViolationException) c.getCause();
         assertEquals(SqlServiceCode.UNIQUE_CONSTRAINT_VIOLATION_EXCEPTION, u.getDiagnosticCode());
@@ -75,6 +77,10 @@ public class MethodOptionTest extends TsurugiTestTool {
     public void testInsertReplace() {
         var insertList = test("insert", "insert_or_replace");
         var actualList = selectAll();
+        assertOverwrite(insertList, actualList);
+    }
+
+    private void assertOverwrite(List<String> insertList, List<String> actualList) {
         assertEquals(insertList.size(), actualList.size());
         int i = 0;
         for (var actual : actualList) {
@@ -84,33 +90,13 @@ public class MethodOptionTest extends TsurugiTestTool {
     }
 
     @Test
-    public void testPutDefault() {
-        var insertList = test("put", null);
+    public void testInsertIfNotExists() {
+        var insertList = test("insert", "insert_if_not_exists");
         var actualList = selectAll();
-        assertEquals(insertList.size(), actualList.size());
-        int i = 0;
-        for (var actual : actualList) {
-            var expected = insertList.get(i++);
-            assertEquals(expected, actual);
-        }
+        assertIfAbsent(insertList, actualList);
     }
 
-    @Test
-    public void testPutOverwrite() {
-        var insertList = test("put", "put_overwrite");
-        var actualList = selectAll();
-        assertEquals(insertList.size(), actualList.size());
-        int i = 0;
-        for (var actual : actualList) {
-            var expected = insertList.get(i++);
-            assertEquals(expected, actual);
-        }
-    }
-
-    @Test
-    public void testPutIfAbsent() {
-        var insertList = test("put", "put_if_absent");
-        var actualList = selectAll();
+    private void assertIfAbsent(List<String> insertList, List<String> actualList) {
         assertEquals(insertList.size(), actualList.size());
         int i = 0;
         for (var actual : actualList) {
@@ -120,6 +106,27 @@ public class MethodOptionTest extends TsurugiTestTool {
             }
             assertEquals(expected, actual);
         }
+    }
+
+    @Test
+    public void testPutDefault() {
+        var insertList = test("put", null);
+        var actualList = selectAll();
+        assertOverwrite(insertList, actualList);
+    }
+
+    @Test
+    public void testPutOverwrite() {
+        var insertList = test("put", "put_overwrite");
+        var actualList = selectAll();
+        assertOverwrite(insertList, actualList);
+    }
+
+    @Test
+    public void testPutIfAbsent() {
+        var insertList = test("put", "put_if_absent");
+        var actualList = selectAll();
+        assertIfAbsent(insertList, actualList);
     }
 
     @Test

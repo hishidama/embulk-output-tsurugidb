@@ -14,6 +14,8 @@ import com.fasterxml.jackson.annotation.JsonValue;
 public enum InsertMethodSub {
     // SQL
     INSERT, INSERT_OR_REPLACE,
+    /** @since 0.1.1 */
+    INSERT_IF_NOT_EXISTS,
     // KVS
     PUT_OVERWRITE, PUT_IF_ABSENT, PUT_IF_PRESENT;
 

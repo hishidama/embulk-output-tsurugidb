@@ -62,25 +62,26 @@ out:
 
 ### method_option
 
-| method_option       | API  | description                                                  |
-| ------------------- | ---- | ------------------------------------------------------------ |
-| `insert`            | SQL  | insert (if record exists, unique constraint will be violated) |
-| `insert_or_replace` | SQL  | insert or replace (insert if record does not exist, update if it exists) |
-| `put_overwrite`     | KVS  | put (similar to `insert_or_replace`)                         |
-| `put_if_absent`     | KVS  | put only when record does not exist                          |
-| `put_if_present`    | KVS  | put only when record exists                                  |
+| method_option          | API  | description                                                                     |
+| ---------------------- | ---- | ------------------------------------------------------------------------------- |
+| `insert`               | SQL  | insert (if record exists, unique constraint will be violated)                   |
+| `insert_or_replace`    | SQL  | insert or replace (insert if record does not exist, update if it exists)        |
+| `insert_if_not_exists` | SQL  | insert if not exists (insert if record does not exist, do nothing if it exists) |
+| `put_overwrite`        | KVS  | put (similar to `insert_or_replace`)                                            |
+| `put_if_absent`        | KVS  | put only when record does not exist (similar to `insert_if_not_exists`)         |
+| `put_if_present`       | KVS  | put only when record exists                                                     |
 
 
 ## Install
 
 1. install plugin
    ```
-   $ mvn dependency:get -Dartifact=io.github.hishidama.embulk:embulk-output-tsurugidb:0.1.0
+   $ mvn dependency:get -Dartifact=io.github.hishidama.embulk:embulk-output-tsurugidb:0.1.1
    ```
 
 2. add setting to $HOME/.embulk/embulk.properties
    ```
-   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:0.1.0
+   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:0.1.1
    ```
 
 ## Build
