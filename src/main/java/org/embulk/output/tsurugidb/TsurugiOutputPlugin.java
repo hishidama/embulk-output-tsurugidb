@@ -1274,7 +1274,17 @@ public class TsurugiOutputPlugin implements OutputPlugin {
             var ex = findServerException(firstException);
             if (ex != null) {
                 var errorCode = ex.getDiagnosticCode();
-                logger.error("{} ({}:{})", errorMessage, errorCode.name(), errorCode);
+                logger.error("{} (first exception:{}:{})", errorMessage, errorCode.name(), errorCode, ex);
+            } else {
+                logger.error("{} (first exception)", errorMessage, firstException);
+            }
+
+            ex = findServerException(lastException);
+            if (ex != null) {
+                var errorCode = ex.getDiagnosticCode();
+                logger.error("{} (last exception:{}:{})", errorMessage, errorCode.name(), errorCode, ex);
+            } else {
+                logger.error("{} (last exception)", errorMessage, lastException);
             }
         }
 
