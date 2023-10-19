@@ -7,8 +7,8 @@ import org.msgpack.value.Value;
 
 // https://github.com/embulk/embulk-output-jdbc/blob/master/embulk-output-jdbc/src/main/java/org/embulk/output/jdbc/setter/SkipColumnSetter.java
 public class SkipColumnSetter extends ColumnSetter {
-    public SkipColumnSetter(String bindName, BatchInsert batch) {
-        super(bindName, batch, null, null);
+    public SkipColumnSetter(BatchInsert batch) {
+        super(null, batch, null, null);
     }
 
     @Override

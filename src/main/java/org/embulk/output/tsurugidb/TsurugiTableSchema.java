@@ -10,7 +10,7 @@ import org.embulk.config.ConfigException;
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonValue;
 
-// https://github.com/embulk/embulk-output-jdbc/blob/master/embulk-output-jdbc/src/main/java/org/embulk/output/jdbc/TsurugiTableSchema.java
+// https://github.com/embulk/embulk-output-jdbc/blob/master/embulk-output-jdbc/src/main/java/org/embulk/output/jdbc/JdbcSchema.java
 public class TsurugiTableSchema {
 
     private List<TsurugiColumn> columns;

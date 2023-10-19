@@ -27,7 +27,6 @@ import org.embulk.output.tsurugidb.common.MergeConfig;
 import org.embulk.output.tsurugidb.common.PageReaderRecord;
 import org.embulk.output.tsurugidb.common.TableIdentifier;
 import org.embulk.output.tsurugidb.common.ToStringMap;
-import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor;
 import org.embulk.output.tsurugidb.insert.BatchInsert;
 import org.embulk.output.tsurugidb.insert.InsertMethod;
 import org.embulk.output.tsurugidb.insert.InsertMethodSub;
@@ -225,6 +224,10 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         public Optional<TsurugiTableSchema> getNewTableSchema();
 
         public void setNewTableSchema(Optional<TsurugiTableSchema> schema);
+
+        public TsurugiTableSchema getOriginalTableSchema();
+
+        public void setOriginalTableSchema(TsurugiTableSchema schema);
 
         public TsurugiTableSchema getTargetTableSchema();
 
@@ -614,6 +617,7 @@ public class TsurugiOutputPlugin implements OutputPlugin {
             targetTableSchema = newTsurugiTableSchemaFromTableIfExists(con, task.getActualTable()).get();
             task.setNewTableSchema(Optional.<TsurugiTableSchema>empty());
         }
+        task.setOriginalTableSchema(targetTableSchema);
         task.setTargetTableSchema(matchSchemaByColumnNames(schema, targetTableSchema));
 
         // validate column_options
@@ -802,14 +806,14 @@ public class TsurugiOutputPlugin implements OutputPlugin {
             TsurugiColumn targetColumn = targetTableSchema.getColumn(schemaColumnIndex);
             Column inputColumn = inputValueSchema.getColumn(schemaColumnIndex);
 
-            String bindName = TsurugiSqlExecutor.getBindName(targetColumn);
             if (targetColumn.isSkipColumn()) {
-                builder.add(factory.newSkipColumnSetter(bindName));
+                builder.add(factory.newSkipColumnSetter());
             } else {
                 DbColumnOption option = columnOptionOf(columnOptions, inputColumn.getName());
-                builder.add(factory.newColumnSetter(bindName, targetColumn, option));
+                builder.add(factory.newColumnSetter(targetColumn, option));
             }
         }
+
         return Collections.unmodifiableList(builder);
     }
 
@@ -962,7 +966,7 @@ public class TsurugiOutputPlugin implements OutputPlugin {
     }
 
     private TsurugiTableSchema matchSchemaByColumnNames(Schema inputSchema, TsurugiTableSchema targetTableSchema) {
-        final ArrayList<TsurugiColumn> tsurugiColumns = new ArrayList<>();
+        final ArrayList<TsurugiColumn> tsurugiColumns = new ArrayList<>(inputSchema.getColumnCount());
 
         for (Column column : inputSchema.getColumns()) {
             Optional<TsurugiColumn> c = targetTableSchema.findColumn(column.getName());

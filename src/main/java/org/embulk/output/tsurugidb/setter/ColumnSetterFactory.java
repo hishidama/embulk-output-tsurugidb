@@ -5,6 +5,7 @@ import java.time.ZoneId;
 import org.embulk.config.ConfigException;
 import org.embulk.output.tsurugidb.TsurugiColumn;
 import org.embulk.output.tsurugidb.common.DbColumnOption;
+import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor;
 import org.embulk.output.tsurugidb.insert.BatchInsert;
 import org.embulk.util.timestamp.TimestampFormatter;
 
@@ -18,15 +19,16 @@ public class ColumnSetterFactory {
         this.defaultTimeZone = defaultTimeZone;
     }
 
-    public SkipColumnSetter newSkipColumnSetter(String bindName) {
-        return new SkipColumnSetter(bindName, batch);
+    public SkipColumnSetter newSkipColumnSetter() {
+        return new SkipColumnSetter(batch);
     }
 
     public DefaultValueSetter newDefaultValueSetter(String bindName, TsurugiColumn column, DbColumnOption option) {
         return new NullDefaultValueSetter(bindName, batch, column);
     }
 
-    public ColumnSetter newColumnSetter(String bindName, TsurugiColumn column, DbColumnOption option) {
+    public ColumnSetter newColumnSetter(TsurugiColumn column, DbColumnOption option) {
+        String bindName = TsurugiSqlExecutor.getBindName(column);
         switch (option.getValueType()) {
         case "coerce":
             return newCoalesceColumnSetter(bindName, column, option);
