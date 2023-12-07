@@ -321,13 +321,21 @@ public class TsurugiSqlExecutor implements AutoCloseable {
     }
 
     public int[] executeInsertWait(PreparedStatement ps, List<List<Parameter>> list) throws IOException, ServerException {
+        var result = new int[list.size()];
+
         var tx = getTransaction();
+        int i = 0;
         for (var parameter : list) {
             try {
                 int timeout = task.getInsertTimeout();
                 tx.executeStatement(ps, parameter).await(timeout, TimeUnit.SECONDS);
+                result[i++] = 1; // TODO Tsurugi get count
             } catch (InterruptedException | TimeoutException e) {
+                logExceptionRecord(e, parameter);
                 throw new RuntimeException(e);
+            } catch (Exception e) {
+                logExceptionRecord(e, parameter);
+                throw e;
             }
         }
 
@@ -335,14 +343,22 @@ public class TsurugiSqlExecutor implements AutoCloseable {
             commit();
         }
 
-        // TODO Tsurugi get count
-        var result = new int[list.size()];
-        Arrays.fill(result, 1);
         return result;
     }
 
+    protected void logExceptionRecord(Exception e, List<Parameter> parameter) {
+        String code;
+        if (e instanceof ServerException) {
+            code = ((ServerException) e).getDiagnosticCode().name();
+        } else {
+            code = e.getClass().getSimpleName();
+        }
+        logger.debug("{} occurred. message={}, parameter={}", code, e.getMessage(), parameter, e);
+    }
+
     public int[] executeInsert(PreparedStatement ps, List<List<Parameter>> list) throws IOException, ServerException {
-        try (var futures = new Futures(list.size())) {
+        var futures = new Futures(list);
+        try (futures) {
             var tx = getTransaction();
             for (var parameter : list) {
                 futures.add(tx.executeStatement(ps, parameter));
@@ -355,17 +371,19 @@ public class TsurugiSqlExecutor implements AutoCloseable {
             commit();
         }
 
-        // TODO Tsurugi get count
-        var result = new int[list.size()];
-        Arrays.fill(result, 1);
-        return result;
+        return futures.getResult();
     }
 
     private class Futures implements AutoCloseable {
+        private final List<List<Parameter>> parameterList;
         private final List<FutureResponse<Void>> futureList;
+        private final int[] result;
 
-        public Futures(int size) {
+        public Futures(List<List<Parameter>> list) {
+            this.parameterList = list;
+            int size = list.size();
             this.futureList = new ArrayList<>(size);
+            this.result = new int[size];
         }
 
         public void add(FutureResponse<Void> future) {
@@ -377,13 +395,18 @@ public class TsurugiSqlExecutor implements AutoCloseable {
             var exceptionSet = new HashSet<Class<?>>();
             Exception futureException = null;
             int timeout = task.getInsertTimeout();
+            int i = 0;
             for (var future : futureList) {
                 try {
                     future.await(timeout, TimeUnit.SECONDS);
+                    result[i] = 1; // TODO Tsurugi get count
                 } catch (Exception e) {
+                    if (futureException == null) {
+                        var parameter = parameterList.get(i);
+                        logExceptionRecord(e, parameter);
+                    }
                     var exClass = e.getClass();
-                    if (!exceptionSet.contains(exClass)) {
-                        exceptionSet.add(exClass);
+                    if (exceptionSet.add(exClass)) {
                         if (futureException == null) {
                             futureException = e;
                         } else {
@@ -391,6 +414,7 @@ public class TsurugiSqlExecutor implements AutoCloseable {
                         }
                     }
                 }
+                i++;
             }
             if (futureException != null) {
                 if (futureException instanceof IOException) {
@@ -410,6 +434,10 @@ public class TsurugiSqlExecutor implements AutoCloseable {
                 }
                 throw new RuntimeException(futureException);
             }
+        }
+
+        public int[] getResult() {
+            return this.result;
         }
     }
 

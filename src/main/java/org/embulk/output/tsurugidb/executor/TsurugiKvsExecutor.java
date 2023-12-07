@@ -148,16 +148,20 @@ public class TsurugiKvsExecutor implements AutoCloseable {
 
     public int[] executePutWait(String tableName, List<RecordBuffer> list) throws IOException, ServerException {
         var result = new int[list.size()];
-        int i = 0;
 
         var tx = getTransactionHandle();
+        int i = 0;
         for (var record : list) {
             try {
                 int timeout = task.getInsertTimeout();
                 var putResult = kvsClient.put(tx, tableName, record, putType).await(timeout, TimeUnit.SECONDS);
                 result[i++] = putResult.size();
             } catch (InterruptedException | TimeoutException e) {
+                logExceptionRecord(e, record);
                 throw new RuntimeException(e);
+            } catch (Exception e) {
+                logExceptionRecord(e, record);
+                throw e;
             }
         }
 
@@ -168,8 +172,18 @@ public class TsurugiKvsExecutor implements AutoCloseable {
         return result;
     }
 
+    protected void logExceptionRecord(Exception e, RecordBuffer record) {
+        String code;
+        if (e instanceof ServerException) {
+            code = ((ServerException) e).getDiagnosticCode().name();
+        } else {
+            code = e.getClass().getSimpleName();
+        }
+        logger.debug("{} occurred. message={}, record={}", code, e.getMessage(), record, e);
+    }
+
     public int[] executePut(String tableName, List<RecordBuffer> list) throws IOException, ServerException {
-        var futures = new Futures(list.size());
+        var futures = new Futures(list);
         try (futures) {
             var tx = getTransactionHandle();
             for (var record : list) {
@@ -187,10 +201,13 @@ public class TsurugiKvsExecutor implements AutoCloseable {
     }
 
     private class Futures implements AutoCloseable {
+        private final List<RecordBuffer> recordList;
         private final List<FutureResponse<PutResult>> futureList;
         private final int[] result;
 
-        public Futures(int size) {
+        public Futures(List<RecordBuffer> list) {
+            this.recordList = list;
+            int size = list.size();
             this.futureList = new ArrayList<>(size);
             this.result = new int[size];
         }
@@ -210,9 +227,12 @@ public class TsurugiKvsExecutor implements AutoCloseable {
                     var putResult = future.await(timeout, TimeUnit.SECONDS);
                     result[i] = putResult.size();
                 } catch (Exception e) {
+                    if (futureException == null) {
+                        var record = recordList.get(i);
+                        logExceptionRecord(e, record);
+                    }
                     var exClass = e.getClass();
-                    if (!exceptionSet.contains(exClass)) {
-                        exceptionSet.add(exClass);
+                    if (exceptionSet.add(exClass)) {
                         if (futureException == null) {
                             futureException = e;
                         } else {
@@ -255,12 +275,12 @@ public class TsurugiKvsExecutor implements AutoCloseable {
         }
 
         var result = new int[list.size()];
-        int i = 0;
 
         var tx = getTransactionHandle();
         try {
             int timeout = task.getInsertTimeout();
             var batchResult = kvsClient.batch(tx, script).await(timeout, TimeUnit.SECONDS);
+            int i = 0;
             for (var ref : refList) {
                 var putResult = batchResult.get(ref);
                 result[i++] = putResult.size();
