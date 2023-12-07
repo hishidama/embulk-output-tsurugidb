@@ -33,6 +33,7 @@ import com.tsurugidb.sql.proto.SqlRequest.TransactionType;
 import com.tsurugidb.sql.proto.SqlRequest.WritePreserve;
 import com.tsurugidb.tsubakuro.common.Session;
 import com.tsurugidb.tsubakuro.exception.ServerException;
+import com.tsurugidb.tsubakuro.sql.ExecuteResult;
 import com.tsurugidb.tsubakuro.sql.Placeholders;
 import com.tsurugidb.tsubakuro.sql.PreparedStatement;
 import com.tsurugidb.tsubakuro.sql.SqlClient;
@@ -328,8 +329,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         for (var parameter : list) {
             try {
                 int timeout = task.getInsertTimeout();
-                tx.executeStatement(ps, parameter).await(timeout, TimeUnit.SECONDS);
-                result[i++] = 1; // TODO Tsurugi get count
+                var executeResult = tx.executeStatement(ps, parameter).await(timeout, TimeUnit.SECONDS);
+                result[i++] = toCount(executeResult);
             } catch (InterruptedException | TimeoutException e) {
                 logExceptionRecord(e, parameter);
                 throw new RuntimeException(e);
@@ -344,6 +345,14 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         }
 
         return result;
+    }
+
+    protected int toCount(ExecuteResult executeResult) {
+        long result = 0;
+        for (Long count : executeResult.getCounters().values()) {
+            result += count;
+        }
+        return (int) result;
     }
 
     protected void logExceptionRecord(Exception e, List<Parameter> parameter) {
@@ -376,7 +385,7 @@ public class TsurugiSqlExecutor implements AutoCloseable {
 
     private class Futures implements AutoCloseable {
         private final List<List<Parameter>> parameterList;
-        private final List<FutureResponse<Void>> futureList;
+        private final List<FutureResponse<ExecuteResult>> futureList;
         private final int[] result;
 
         public Futures(List<List<Parameter>> list) {
@@ -386,7 +395,7 @@ public class TsurugiSqlExecutor implements AutoCloseable {
             this.result = new int[size];
         }
 
-        public void add(FutureResponse<Void> future) {
+        public void add(FutureResponse<ExecuteResult> future) {
             futureList.add(future);
         }
 
@@ -398,8 +407,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
             int i = 0;
             for (var future : futureList) {
                 try {
-                    future.await(timeout, TimeUnit.SECONDS);
-                    result[i] = 1; // TODO Tsurugi get count
+                    var executeResult = future.await(timeout, TimeUnit.SECONDS);
+                    result[i] = toCount(executeResult);
                 } catch (Exception e) {
                     if (futureException == null) {
                         var parameter = parameterList.get(i);

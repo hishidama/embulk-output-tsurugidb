@@ -15,6 +15,8 @@ out:
   type: tsurugidb
   endpoint: tcp://localhost:12345
   table: test
+  mode: insert_direct
+  method: insert
 ```
 
 
@@ -76,13 +78,19 @@ out:
 
 1. install plugin
    ```
-   $ mvn dependency:get -Dartifact=io.github.hishidama.embulk:embulk-output-tsurugidb:0.1.1
+   $ mvn dependency:get -Dartifact=io.github.hishidama.embulk:embulk-output-tsurugidb:0.1.2
    ```
 
 2. add setting to $HOME/.embulk/embulk.properties
    ```
-   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:0.1.1
+   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:0.1.2
    ```
+
+| version       | Tsurugi     | Tsubakuro |
+|---------------|-------------|-----------|
+| 0.1.0 - 0.1.1 | 1.0.0-BETA1 | 1.0.1     |
+| 0.1.2         | 1.0.0-BETA2 | 1.1.0     |
+
 
 ## Build
 
