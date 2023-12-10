@@ -27,6 +27,7 @@ import org.embulk.output.tsurugidb.common.MergeConfig;
 import org.embulk.output.tsurugidb.common.PageReaderRecord;
 import org.embulk.output.tsurugidb.common.TableIdentifier;
 import org.embulk.output.tsurugidb.common.ToStringMap;
+import org.embulk.output.tsurugidb.executor.LogLevelOnError;
 import org.embulk.output.tsurugidb.insert.BatchInsert;
 import org.embulk.output.tsurugidb.insert.InsertMethod;
 import org.embulk.output.tsurugidb.insert.InsertMethodSub;
@@ -187,6 +188,31 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         @ConfigDefault("\"UTC\"")
         public ZoneId getDefaultTimeZone();
 
+        // @since 0.1.3
+        @Config("validate_nul_char")
+        @ConfigDefault("true")
+        boolean getValidateNulChar();
+
+        // @since 0.1.3
+        @Config("log_level_on_invalid_record")
+        @ConfigDefault("\"debug\"")
+        LogLevelOnError getLogLevelOnInvalidRecord();
+
+        // @since 0.1.3
+        @Config("stop_on_invalid_record")
+        @ConfigDefault("false")
+        boolean getStopOnInvalidRecord();
+
+        // @since 0.1.3
+        @Config("log_level_on_record_error")
+        @ConfigDefault("\"debug\"")
+        LogLevelOnError getLogLevelOnRecordError();
+
+        // @since 0.1.3
+        @Config("stop_on_record_error")
+        @ConfigDefault("true")
+        boolean getStopOnRecordError();
+
         @Config("retry_limit")
         @ConfigDefault("12")
         public int getRetryLimit();
@@ -329,17 +355,17 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         if (mergeConfig.isPresent()) {
             switch (insertMethod) {
             case INSERT:
-                return new TsurugiBatchInsertInsert(connector, mergeConfig);
+                return new TsurugiBatchInsertInsert(task, connector, mergeConfig);
             case INSERT_WAIT:
-                return new TsurugiBatchInsertInsertWait(connector, mergeConfig);
+                return new TsurugiBatchInsertInsertWait(task, connector, mergeConfig);
             case INSERT_BATCH:
-                return new TsurugiBatchInsertInsertBatch(connector, mergeConfig);
+                return new TsurugiBatchInsertInsertBatch(task, connector, mergeConfig);
             case PUT:
-                return new TsurugiBatchInsertPut(connector, mergeConfig);
+                return new TsurugiBatchInsertPut(task, connector, mergeConfig);
             case PUT_WAIT:
-                return new TsurugiBatchInsertPutWait(connector, mergeConfig);
+                return new TsurugiBatchInsertPutWait(task, connector, mergeConfig);
             case PUT_BATCH:
-                return new TsurugiBatchInsertPutBatch(connector, mergeConfig);
+                return new TsurugiBatchInsertPutBatch(task, connector, mergeConfig);
             default:
                 throw new AssertionError(insertMethod);
             }
@@ -347,17 +373,17 @@ public class TsurugiOutputPlugin implements OutputPlugin {
 //      return new PostgreSQLCopyBatchInsert(getConnector(task, true));
         switch (insertMethod) {
         case INSERT:
-            return new TsurugiBatchInsertInsert(connector, mergeConfig);
+            return new TsurugiBatchInsertInsert(task, connector, mergeConfig);
         case INSERT_WAIT:
-            return new TsurugiBatchInsertInsertWait(connector, mergeConfig);
+            return new TsurugiBatchInsertInsertWait(task, connector, mergeConfig);
         case INSERT_BATCH:
-            return new TsurugiBatchInsertInsertBatch(connector, mergeConfig);
+            return new TsurugiBatchInsertInsertBatch(task, connector, mergeConfig);
         case PUT:
-            return new TsurugiBatchInsertPut(connector, mergeConfig);
+            return new TsurugiBatchInsertPut(task, connector, mergeConfig);
         case PUT_WAIT:
-            return new TsurugiBatchInsertPutWait(connector, mergeConfig);
+            return new TsurugiBatchInsertPutWait(task, connector, mergeConfig);
         case PUT_BATCH:
-            return new TsurugiBatchInsertPutBatch(connector, mergeConfig);
+            return new TsurugiBatchInsertPutBatch(task, connector, mergeConfig);
         default:
             throw new AssertionError(insertMethod);
         }

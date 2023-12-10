@@ -16,6 +16,7 @@ import java.util.Optional;
 import org.embulk.output.tsurugidb.TsurugiOutputConnection;
 import org.embulk.output.tsurugidb.TsurugiOutputConnector;
 import org.embulk.output.tsurugidb.TsurugiTableSchema;
+import org.embulk.output.tsurugidb.TsurugiOutputPlugin.PluginTask;
 import org.embulk.output.tsurugidb.common.MergeConfig;
 import org.embulk.output.tsurugidb.common.TableIdentifier;
 import org.embulk.output.tsurugidb.executor.TsurugiKvsExecutor;
@@ -30,8 +31,8 @@ public abstract class TsurugiKvsBatchInsert extends TsurugiBatchInsert {
     private RecordBuffer record;
     protected final List<RecordBuffer> recordList = new ArrayList<>(1024);
 
-    public TsurugiKvsBatchInsert(TsurugiOutputConnector connector, Optional<MergeConfig> mergeConfig) {
-        super(connector, mergeConfig);
+    public TsurugiKvsBatchInsert(PluginTask task, TsurugiOutputConnector connector, Optional<MergeConfig> mergeConfig) {
+        super(task, connector, mergeConfig);
     }
 
     @Override
@@ -129,6 +130,7 @@ public abstract class TsurugiKvsBatchInsert extends TsurugiBatchInsert {
 
     @Override
     public void setString(String bindName, String v) {
+        checkNulChar(bindName, v);
         record.add(bindName, v);
         // estimate all chracters use 2 bytes; almost enough for the worst case
         nextColumn(v.length() * 2 + 4);
@@ -136,6 +138,7 @@ public abstract class TsurugiKvsBatchInsert extends TsurugiBatchInsert {
 
     @Override
     public void setNString(String bindName, String v) {
+        checkNulChar(bindName, v);
         record.add(bindName, v);
         // estimate all chracters use 2 bytes; almost enough for the worst case
         nextColumn(v.length() * 2 + 4);

@@ -19,6 +19,7 @@ import javax.annotation.OverridingMethodsMustInvokeSuper;
 import org.embulk.output.tsurugidb.TsurugiOutputConnection;
 import org.embulk.output.tsurugidb.TsurugiOutputConnector;
 import org.embulk.output.tsurugidb.TsurugiTableSchema;
+import org.embulk.output.tsurugidb.TsurugiOutputPlugin.PluginTask;
 import org.embulk.output.tsurugidb.common.MergeConfig;
 import org.embulk.output.tsurugidb.common.TableIdentifier;
 import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor;
@@ -36,8 +37,8 @@ public abstract class TsurugiSqlBatchInsert extends TsurugiBatchInsert {
     private List<Parameter> record;
     protected final List<List<Parameter>> recordList = new ArrayList<>(1024);
 
-    public TsurugiSqlBatchInsert(TsurugiOutputConnector connector, Optional<MergeConfig> mergeConfig) {
-        super(connector, mergeConfig);
+    public TsurugiSqlBatchInsert(PluginTask task, TsurugiOutputConnector connector, Optional<MergeConfig> mergeConfig) {
+        super(task, connector, mergeConfig);
     }
 
     @Override
@@ -152,6 +153,7 @@ public abstract class TsurugiSqlBatchInsert extends TsurugiBatchInsert {
 
     @Override
     public void setString(String bindName, String v) {
+        checkNulChar(bindName, v);
         record.add(Parameters.of(bindName, v));
         // estimate all chracters use 2 bytes; almost enough for the worst case
         nextColumn(v.length() * 2 + 4);
@@ -159,6 +161,7 @@ public abstract class TsurugiSqlBatchInsert extends TsurugiBatchInsert {
 
     @Override
     public void setNString(String bindName, String v) {
+        checkNulChar(bindName, v);
         record.add(Parameters.of(bindName, v));
         // estimate all chracters use 2 bytes; almost enough for the worst case
         nextColumn(v.length() * 2 + 4);

@@ -10,6 +10,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
+import java.util.function.BiConsumer;
 import java.util.stream.Collectors;
 
 import org.embulk.config.ConfigException;
@@ -25,6 +26,7 @@ import com.tsurugidb.tsubakuro.kvs.BatchScript;
 import com.tsurugidb.tsubakuro.kvs.BatchScript.Ref;
 import com.tsurugidb.tsubakuro.kvs.CommitType;
 import com.tsurugidb.tsubakuro.kvs.KvsClient;
+import com.tsurugidb.tsubakuro.kvs.KvsServiceException;
 import com.tsurugidb.tsubakuro.kvs.PutResult;
 import com.tsurugidb.tsubakuro.kvs.PutType;
 import com.tsurugidb.tsubakuro.kvs.RecordBuffer;
@@ -157,11 +159,13 @@ public class TsurugiKvsExecutor implements AutoCloseable {
                 var putResult = kvsClient.put(tx, tableName, record, putType).await(timeout, TimeUnit.SECONDS);
                 result[i++] = putResult.size();
             } catch (InterruptedException | TimeoutException e) {
-                logExceptionRecord(e, record);
                 throw new RuntimeException(e);
-            } catch (Exception e) {
-                logExceptionRecord(e, record);
-                throw e;
+            } catch (ServerException e) {
+                boolean isStop = isStop(e);
+                logExceptionRecord(e, record, isStop);
+                if (isStop) {
+                    throw e;
+                }
             }
         }
 
@@ -172,14 +176,69 @@ public class TsurugiKvsExecutor implements AutoCloseable {
         return result;
     }
 
-    protected void logExceptionRecord(Exception e, RecordBuffer record) {
+    protected void logExceptionRecord(Exception e, RecordBuffer record, boolean isStop) {
         String code;
         if (e instanceof ServerException) {
             code = ((ServerException) e).getDiagnosticCode().name();
         } else {
             code = e.getClass().getSimpleName();
         }
-        logger.debug("{} occurred. message={}, record={}", code, e.getMessage(), record, e);
+
+        BiConsumer<String, Object[]> logMethod;
+        boolean withStackTrace = false;
+        LogLevelOnError logLevel = task.getLogLevelOnRecordError();
+        switch (logLevel) {
+        case NONE:
+            if (isStop) {
+                return;
+            }
+            logger.warn("skipped {}. message={}", code, e.getMessage());
+            return;
+        case DEBUG:
+            logMethod = logger::debug;
+            break;
+        case DEBUG_STACKTRACE:
+            logMethod = logger::debug;
+            withStackTrace = true;
+            break;
+        case INFO:
+            logMethod = logger::info;
+            break;
+        case WARN:
+            logMethod = logger::warn;
+            break;
+        case ERROR:
+            logMethod = logger::error;
+            break;
+        default:
+            if (isStop) {
+                var a = new AssertionError("invalid log_level_on_record_error=" + logLevel);
+                a.addSuppressed(e);
+                throw a;
+            }
+            logger.warn("invalid log_level_on_record_error={}", logLevel);
+            return;
+        }
+        if (isStop) {
+            if (withStackTrace) {
+                logMethod.accept("{} occurred. message={}, record={}", new Object[] { code, e.getMessage(), record, e });
+            } else {
+                logMethod.accept("{} occurred. message={}, record={}", new Object[] { code, e.getMessage(), record });
+            }
+        } else {
+            if (withStackTrace) {
+                logMethod.accept("skipped {}. message={}, record={}", new Object[] { code, e.getMessage(), record, e });
+            } else {
+                logMethod.accept("skipped {}. message={}, record={}", new Object[] { code, e.getMessage(), record });
+            }
+        }
+    }
+
+    protected boolean isStop(Exception e) {
+        if (e instanceof KvsServiceException) { // TODO Tsurugi KvsExecutionException
+            return task.getStopOnRecordError();
+        }
+        return true;
     }
 
     public int[] executePut(String tableName, List<RecordBuffer> list) throws IOException, ServerException {
@@ -220,6 +279,7 @@ public class TsurugiKvsExecutor implements AutoCloseable {
         public void close() throws IOException, ServerException, InterruptedException, TimeoutException {
             var exceptionSet = new HashSet<Class<?>>();
             Exception futureException = null;
+            boolean isStopFinally = false;
             int timeout = task.getInsertTimeout();
             int i = 0;
             for (var future : futureList) {
@@ -227,10 +287,12 @@ public class TsurugiKvsExecutor implements AutoCloseable {
                     var putResult = future.await(timeout, TimeUnit.SECONDS);
                     result[i] = putResult.size();
                 } catch (Exception e) {
-                    if (futureException == null) {
+                    boolean isStop = isStop(e);
+                    if (e instanceof ServerException) {
                         var record = recordList.get(i);
-                        logExceptionRecord(e, record);
+                        logExceptionRecord(e, record, isStop);
                     }
+                    isStopFinally |= isStop;
                     var exClass = e.getClass();
                     if (exceptionSet.add(exClass)) {
                         if (futureException == null) {
@@ -242,7 +304,7 @@ public class TsurugiKvsExecutor implements AutoCloseable {
                 }
                 i++;
             }
-            if (futureException != null) {
+            if (futureException != null && isStopFinally) {
                 if (futureException instanceof IOException) {
                     throw (IOException) futureException;
                 }

@@ -50,6 +50,9 @@ out:
 * **begin_timeout**: timeout for begin transaction (integer (seconds), default: 300)
 * **insert_timeout**: timeout for insert (integer (seconds), default: 300)
 * **commit_timeout**: timeout for commit (integer (seconds), default: 300)
+* **validate_nul_char**: (ver 0.1.3) validate nul-char (boolean, default: true)
+* **log_level_on_invalid_record**: (ver 0.1.3) log level for invalid data (string, default: DEBUG)
+* **stop_on_invalid_record**: (ver 0.1.3) Stop bulk load transaction if a file includes invalid record (such as invalid char) (boolean, default: false)
 
 ### method
 
@@ -78,18 +81,18 @@ out:
 
 1. install plugin
    ```
-   $ mvn dependency:get -Dartifact=io.github.hishidama.embulk:embulk-output-tsurugidb:0.1.2
+   $ mvn dependency:get -Dartifact=io.github.hishidama.embulk:embulk-output-tsurugidb:0.1.3
    ```
 
 2. add setting to $HOME/.embulk/embulk.properties
    ```
-   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:0.1.2
+   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:0.1.3
    ```
 
 | version       | Tsurugi     | Tsubakuro |
 |---------------|-------------|-----------|
 | 0.1.0 - 0.1.1 | 1.0.0-BETA1 | 1.0.1     |
-| 0.1.2         | 1.0.0-BETA2 | 1.1.0     |
+| 0.1.2 -       | 1.0.0-BETA2 | 1.1.0     |
 
 
 ## Build

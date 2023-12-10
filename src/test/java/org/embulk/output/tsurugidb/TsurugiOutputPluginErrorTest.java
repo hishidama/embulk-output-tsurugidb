@@ -64,7 +64,7 @@ public class TsurugiOutputPluginErrorTest extends TsurugiTestTool {
 
             var csvList = new ArrayList<String>();
             for (int i = 0; i < SIZE; i++) {
-                String csv = i + ",aaaaa";
+                String csv = i + "," + Integer.toString(i).repeat(5);
                 csvList.add(csv);
             }
 
@@ -85,6 +85,8 @@ public class TsurugiOutputPluginErrorTest extends TsurugiTestTool {
             if (method != null) {
                 out.set("method", method);
             }
+            out.set("log_level_on_record_error", "WARN");
+            out.set("stop_on_record_error", true);
 
             try {
                 tester.runOutput(csvList, parser, out);
@@ -94,7 +96,7 @@ public class TsurugiOutputPluginErrorTest extends TsurugiTestTool {
                     throw e;
                 }
                 var c = r.getCause();
-                if (!expectedClass.isInstance(c)) {
+                if (c.getClass() != expectedClass) {
                     throw e;
                 }
                 return;
