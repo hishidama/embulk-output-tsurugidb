@@ -43,6 +43,8 @@ public class TsurugiOutputConnection implements AutoCloseable {
         try {
             session = SessionBuilder.connect(endpoint) //
                     .withCredential(credential) //
+                    .withApplicationName("embulk-output-tsurugidb") //
+                    .withLabel(task.getConnectionLabel()) //
                     .create(connectTimeout, TimeUnit.SECONDS);
         } catch (IOException e) {
             throw new UncheckedIOException(e.getMessage(), e);

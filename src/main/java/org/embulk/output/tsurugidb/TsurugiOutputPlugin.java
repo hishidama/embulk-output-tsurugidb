@@ -84,6 +84,10 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         @Config("endpoint")
         public String getEndpoint();
 
+        @Config("connection_label")
+        @ConfigDefault("\"embulk-output-tsurugidb\"")
+        public String getConnectionLabel();
+
         @Config("user")
         @ConfigDefault("null")
         public Optional<String> getUser();

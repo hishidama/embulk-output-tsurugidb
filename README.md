@@ -25,6 +25,7 @@ out:
 ## Configuration
 
 * **endpoint**: endpoint for Tsurugi (string, required)
+* **connection_label**: connection label (string, default: `embulk-output-tsurugidb`)
 * **tx_type**: transaction type (`OCC`, `LTX`) (string, default: `LTX`)
 * **tx_label**: transaction label (string, default: `embulk-output-tsurugidb`)
 * **tx_write_preserve**: (LTX only) write preserve (list of string, defualt: empty list)
