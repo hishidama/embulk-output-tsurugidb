@@ -70,6 +70,8 @@ public class TsurugiTestTool {
             }
             try {
                 staticSession = SessionBuilder.connect(ENDPOINT) //
+                        .withApplicationName("embulk-output-tsurugidb.test") //
+                        .withLabel("embulk-output-tsurugidb.test.static-session") //
                         .create(TIMEOUT, TIMEOUT_UNIT);
             } catch (IOException e) {
                 throw new UncheckedIOException(e.getMessage(), e);
