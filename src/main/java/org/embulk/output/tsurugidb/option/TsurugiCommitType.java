@@ -1,4 +1,4 @@
-package org.embulk.output.tsurugidb;
+package org.embulk.output.tsurugidb.option;
 
 import java.text.MessageFormat;
 import java.util.Arrays;

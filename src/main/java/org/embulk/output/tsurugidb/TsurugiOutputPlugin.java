@@ -37,6 +37,8 @@ import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertInsertWait;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertPut;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertPutBatch;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertPutWait;
+import org.embulk.output.tsurugidb.option.TsurugiCommitType;
+import org.embulk.output.tsurugidb.option.TsurugiSessionShutdownType;
 import org.embulk.output.tsurugidb.setter.ColumnSetter;
 import org.embulk.output.tsurugidb.setter.ColumnSetterFactory;
 import org.embulk.output.tsurugidb.setter.ColumnSetterVisitor;
@@ -124,6 +126,10 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         @ConfigDefault("\"default\"")
         public TsurugiCommitType getCommitType();
 
+        @Config("session_shutdown_type")
+        @ConfigDefault("\"nothing\"")
+        public TsurugiSessionShutdownType getSessionShutdownType();
+
         @Config("connect_timeout")
         @ConfigDefault("300")
         public int getConnectTimeout();
@@ -143,6 +149,10 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         @Config("commit_timeout")
         @ConfigDefault("300")
         public int getCommitTimeout();
+
+        @Config("session_shutdown_timeout")
+        @ConfigDefault("300")
+        public int getSessionShutdownTimeout();
 
         @Config("socket_timeout")
         @ConfigDefault("1800")
