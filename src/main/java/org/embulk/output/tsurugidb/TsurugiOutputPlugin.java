@@ -126,6 +126,10 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         @ConfigDefault("\"default\"")
         public TsurugiCommitType getCommitType();
 
+        @Config("session_keep_alive")
+        @ConfigDefault("null")
+        public Optional<Boolean> getSessionKeepAlive();
+
         @Config("session_shutdown_type")
         @ConfigDefault("\"nothing\"")
         public TsurugiSessionShutdownType getSessionShutdownType();

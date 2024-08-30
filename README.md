@@ -33,6 +33,7 @@ out:
 * **tx_exclusive_read_area**: (LTX only) exclusive read area (list of string, defualt: empty list)
 * **tx_priority**: (LTX only) transaction priority (string, default: `null`)
 * **commit_type**: commit type (string, default: `default`)
+* **session_keep_alive**: session shutdown type (boolean, default: `null`)
 * **session_shutdown_type**: session shutdown type (string, default: `nothing`)
 * **table**: destination table name (string, required)
 * **mode**: "insert_direct" (string, default: `insert_direct`)
