@@ -160,8 +160,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         int count = 0;
         try {
             int timeout = task.getUpdateTimeout();
-            tx.executeStatement(sql).await(timeout, TimeUnit.SECONDS);
-            // TODO Tsurugi get count
+            var result = tx.executeStatement(sql).await(timeout, TimeUnit.SECONDS);
+            count += toCount(result);
         } catch (IOException e) {
             throw new UncheckedIOException(e.getMessage(), e);
         } catch (InterruptedException | TimeoutException e) {
