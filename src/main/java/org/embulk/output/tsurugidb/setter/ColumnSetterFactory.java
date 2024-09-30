@@ -28,7 +28,7 @@ public class ColumnSetterFactory {
     }
 
     public ColumnSetter newColumnSetter(TsurugiColumn column, DbColumnOption option) {
-        String bindName = TsurugiSqlExecutor.getBindName(column);
+        String bindName = TsurugiSqlExecutor.getBindName(column, -1);
         switch (option.getValueType()) {
         case "coerce":
             return newCoalesceColumnSetter(bindName, column, option);

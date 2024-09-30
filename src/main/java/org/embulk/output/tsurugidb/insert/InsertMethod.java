@@ -12,7 +12,7 @@ import com.fasterxml.jackson.annotation.JsonValue;
 
 public enum InsertMethod {
     // SQL
-    INSERT, INSERT_WAIT, INSERT_BATCH,
+    INSERT, INSERT_WAIT, INSERT_MULTI_VALUES, INSERT_BATCH,
     // KVS
     PUT, PUT_WAIT, PUT_BATCH;
 

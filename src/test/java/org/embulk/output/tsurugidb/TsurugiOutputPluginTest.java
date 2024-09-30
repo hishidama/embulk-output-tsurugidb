@@ -44,13 +44,13 @@ public class TsurugiOutputPluginTest extends TsurugiTestTool {
     }
 
     @Test
-    public void testInsertOrReplaceOcc() {
-        test("OCC", "insert_direct", "insert", "insert_or_replace");
+    public void testInsertLtx() {
+        test("LTX", "insert_direct", "insert", null);
     }
 
     @Test
-    public void testInsertLtx() {
-        test("LTX", "insert_direct", "insert", null);
+    public void testInsertOrReplaceOcc() {
+        test("OCC", "insert_direct", "insert", "insert_or_replace");
     }
 
     @Test
@@ -66,6 +66,26 @@ public class TsurugiOutputPluginTest extends TsurugiTestTool {
     @Test
     public void testInsertWaitLtx() {
         test("LTX", "insert_direct", "insert_wait", null);
+    }
+
+    @Test
+    public void testInsertInsertMultiValueshOcc() {
+        test("OCC", "insert_direct", "insert_multi_values", null);
+    }
+
+    @Test
+    public void testInsertInsertMultiValuesLtx() {
+        test("LTX", "insert_direct", "insert_multi_values", null);
+    }
+
+    @Test
+    public void testInsertOrReplaceInsertMultiValueshOcc() {
+        test("OCC", "insert_direct", "insert_multi_values", "insert_or_replace");
+    }
+
+    @Test
+    public void testInsertOrReplaceInsertMultiValuesLtx() {
+        test("LTX", "insert_direct", "insert_multi_values", "insert_or_replace");
     }
 
     @Test
@@ -145,6 +165,9 @@ public class TsurugiOutputPluginTest extends TsurugiTestTool {
             }
             if (method != null) {
                 out.set("method", method);
+            }
+            if (methodOption != null) {
+                out.set("method_option", methodOption);
             }
 
             tester.runOutput(csvList, parser, out);

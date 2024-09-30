@@ -33,6 +33,7 @@ import org.embulk.output.tsurugidb.insert.InsertMethod;
 import org.embulk.output.tsurugidb.insert.InsertMethodSub;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertInsert;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertInsertBatch;
+import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertInsertMultiValues;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertInsertWait;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertPut;
 import org.embulk.output.tsurugidb.insert.TsurugiBatchInsertPutBatch;
@@ -376,6 +377,8 @@ public class TsurugiOutputPlugin implements OutputPlugin {
                 return new TsurugiBatchInsertInsert(task, connector, mergeConfig);
             case INSERT_WAIT:
                 return new TsurugiBatchInsertInsertWait(task, connector, mergeConfig);
+            case INSERT_MULTI_VALUES:
+                return new TsurugiBatchInsertInsertMultiValues(task, connector, mergeConfig);
             case INSERT_BATCH:
                 return new TsurugiBatchInsertInsertBatch(task, connector, mergeConfig);
             case PUT:
@@ -394,6 +397,8 @@ public class TsurugiOutputPlugin implements OutputPlugin {
             return new TsurugiBatchInsertInsert(task, connector, mergeConfig);
         case INSERT_WAIT:
             return new TsurugiBatchInsertInsertWait(task, connector, mergeConfig);
+        case INSERT_MULTI_VALUES:
+            return new TsurugiBatchInsertInsertMultiValues(task, connector, mergeConfig);
         case INSERT_BATCH:
             return new TsurugiBatchInsertInsertBatch(task, connector, mergeConfig);
         case PUT:

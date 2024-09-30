@@ -60,14 +60,15 @@ out:
 
 ### method
 
-| method         | API  | description                                        |
-| -------------- | ---- | -------------------------------------------------- |
-| `insert`       | SQL  | Insert and wait for insert completion all at once. |
-| `insert_wait`  | SQL  | Insert and wait for each insert to complete.       |
-| `insert_batch` | SQL  | Insert using batch API.                            |
-| `put`          | KVS  | Put and wait for put completion all at once.       |
-| `put_wait`     | KVS  | Put and wait for each put to complete.             |
-| `put_batch`    | KVS  | Put using batch API.                               |
+| method                 | API  | description                                        |
+| ---------------------- | ---- | -------------------------------------------------- |
+| `insert`               | SQL  | Insert and wait for insert completion all at once. |
+| `insert_wait`          | SQL  | Insert and wait for each insert to complete.       |
+| `insert_multi_values`  | SQL  | Insert with multiple values.                       |
+| `insert_batch`         | SQL  | Insert using batch API.                            |
+| `put`                  | KVS  | Put and wait for put completion all at once.       |
+| `put_wait`             | KVS  | Put and wait for each put to complete.             |
+| `put_batch`            | KVS  | Put using batch API.                               |
 
 ### method_option
 

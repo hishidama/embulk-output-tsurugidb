@@ -12,6 +12,7 @@ import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BiConsumer;
+import java.util.function.IntFunction;
 import java.util.stream.Collectors;
 
 import org.embulk.config.ConfigException;
@@ -185,26 +186,44 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         return count;
     }
 
-    public PreparedStatement prepareBatchInsertStatement(TableIdentifier toTable, TsurugiTableSchema toTableSchema, Optional<MergeConfig> mergeConfig) throws ServerException {
+    public PreparedStatement prepareBatchInsertStatement(TableIdentifier toTable, TsurugiTableSchema toTableSchema, Optional<MergeConfig> mergeConfig, int valuesSize) throws ServerException {
         String sql;
         if (mergeConfig.isPresent()) {
+            if (valuesSize > 0) {
+                throw new UnsupportedOperationException("not yet implements");
+            }
             sql = buildPreparedMergeSql(toTable, toTableSchema, mergeConfig.get());
         } else {
-            sql = buildPreparedInsertSql(toTable, toTableSchema);
+            sql = buildPreparedInsertSql(toTable, toTableSchema, valuesSize);
         }
-        logger.info("Prepared SQL: {}", sql);
+        final int SQL_INFO_LENGTH = 1024;
+        if (sql.length() <= SQL_INFO_LENGTH) {
+            logger.info("Prepared SQL: {}", sql);
+        } else {
+            logger.info("Prepared SQL: {}...", sql.substring(0, SQL_INFO_LENGTH));
+        }
 
         var placeholders = new ArrayList<Placeholder>();
-        for (int i = 0; i < toTableSchema.getCount(); i++) {
-            TsurugiColumn column = toTableSchema.getColumn(i);
-            String bindName = getBindName(column);
-            placeholders.add(Placeholders.of(bindName, column.getSqlType()));
+        if (valuesSize <= 0) {
+            for (int i = 0; i < toTableSchema.getCount(); i++) {
+                TsurugiColumn column = toTableSchema.getColumn(i);
+                String bindName = getBindName(column, -1);
+                placeholders.add(Placeholders.of(bindName, column.getSqlType()));
+            }
+        } else {
+            for (int n = 0; n < valuesSize; n++) {
+                for (int i = 0; i < toTableSchema.getCount(); i++) {
+                    TsurugiColumn column = toTableSchema.getColumn(i);
+                    String bindName = getBindName(column, n);
+                    placeholders.add(Placeholders.of(bindName, column.getSqlType()));
+                }
+            }
         }
 
         return prepare(sql, placeholders);
     }
 
-    protected String buildPreparedInsertSql(TableIdentifier toTable, TsurugiTableSchema toTableSchema) {
+    protected String buildPreparedInsertSql(TableIdentifier toTable, TsurugiTableSchema toTableSchema, int valuesSize) {
         StringBuilder sb = new StringBuilder();
 
         sb.append(getInsertInstruction());
@@ -218,15 +237,33 @@ public class TsurugiSqlExecutor implements AutoCloseable {
             }
             quoteIdentifierString(sb, toTableSchema.getColumnName(i));
         }
-        sb.append(") VALUES (");
-        for (int i = 0; i < toTableSchema.getCount(); i++) {
-            if (i != 0) {
-                sb.append(", ");
+        sb.append(") VALUES ");
+        if (valuesSize <= 0) {
+            sb.append("(");
+            for (int i = 0; i < toTableSchema.getCount(); i++) {
+                if (i != 0) {
+                    sb.append(", ");
+                }
+                sb.append(":");
+                sb.append(getBindName(toTableSchema.getColumn(i), -1));
             }
-            sb.append(":");
-            sb.append(getBindName(toTableSchema.getColumn(i)));
+            sb.append(")");
+        } else {
+            for (int n = 0; n < valuesSize; n++) {
+                if (n != 0) {
+                    sb.append(", ");
+                }
+                sb.append("(");
+                for (int i = 0; i < toTableSchema.getCount(); i++) {
+                    if (i != 0) {
+                        sb.append(", ");
+                    }
+                    sb.append(":");
+                    sb.append(getBindName(toTableSchema.getColumn(i), n));
+                }
+                sb.append(")");
+            }
         }
-        sb.append(")");
 
         return sb.toString();
     }
@@ -278,20 +315,26 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         return quoteString + str + quoteString;
     }
 
-    public static String getBindName(TsurugiColumn column) {
+    public static String getBindName(TsurugiColumn column, int valuesIndex) {
         String name = column.getName();
         if (name == null) {
             throw new AssertionError("name==null");
         }
         if (isValidBindName(name)) {
-            return name;
+            if (valuesIndex < 0) {
+                return name;
+            }
+            return name + "_" + valuesIndex;
         }
 
         int index = column.getIndex();
         if (index < 0) {
             throw new AssertionError("index < 0");
         }
-        return "_c" + index;
+        if (valuesIndex < 0) {
+            return "_c" + index;
+        }
+        return "_c" + index + "_" + valuesIndex;
     }
 
     private static boolean isValidBindName(String s) {
@@ -443,15 +486,18 @@ public class TsurugiSqlExecutor implements AutoCloseable {
     }
 
     private class Futures implements AutoCloseable {
-        private final List<List<Parameter>> parameterList;
         private final List<FutureResponse<ExecuteResult>> futureList;
         private final int[] result;
+        private final IntFunction<List<Parameter>> parameterGetter;
 
         public Futures(List<List<Parameter>> list) {
-            this.parameterList = list;
-            int size = list.size();
+            this(list.size(), list.size(), i -> list.get(i));
+        }
+
+        public Futures(int size, int recordCount, IntFunction<List<Parameter>> parameterGetter) {
             this.futureList = new ArrayList<>(size);
-            this.result = new int[size];
+            this.result = new int[recordCount];
+            this.parameterGetter = parameterGetter;
         }
 
         public void add(FutureResponse<ExecuteResult> future) {
@@ -472,7 +518,7 @@ public class TsurugiSqlExecutor implements AutoCloseable {
                 } catch (Exception e) {
                     boolean isStop = isStop(e);
                     if (e instanceof ServerException) {
-                        var parameter = parameterList.get(i);
+                        var parameter = parameterGetter.apply(i);
                         logExceptionRecord(e, parameter, isStop);
                     }
                     isStopFinally |= isStop;
@@ -529,6 +575,50 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         var result = new int[list.size()];
         Arrays.fill(result, 1);
         return result;
+    }
+
+    public static class MultiValues {
+        private int recordCount = 0;
+        private final List<Parameter> parameterList;
+
+        public MultiValues(int initialCapacity) {
+            this.parameterList = new ArrayList<>(initialCapacity);
+        }
+
+        public void add(Parameter parameter) {
+            parameterList.add(parameter);
+        }
+
+        public void incRecordCount() {
+            recordCount++;
+        }
+    }
+
+    public int[] executeInsertMutliValues(TableIdentifier loadTable, TsurugiTableSchema insertSchema, Optional<MergeConfig> mergeConfig, List<MultiValues> valuesList, int recordCount)
+            throws IOException, ServerException {
+        var futures = new Futures(valuesList.size(), recordCount, i -> valuesList.get(i).parameterList);
+        try (futures) {
+            var tx = getTransaction();
+            for (var values : valuesList) {
+                try (var ps = prepareBatchInsertStatement(loadTable, insertSchema, mergeConfig, values.recordCount)) {
+                    var future = tx.executeStatement(ps, values.parameterList);
+                    futures.add(future);
+                } catch (ServerException e) {
+                    boolean isStop = isStop(e);
+                    if (isStop) {
+                        throw e;
+                    }
+                }
+            }
+        } catch (InterruptedException | TimeoutException e) {
+            throw new RuntimeException(e);
+        }
+
+        if (autoCommit) {
+            commit();
+        }
+
+        return futures.getResult();
     }
 
     public boolean existsTransaction() {
