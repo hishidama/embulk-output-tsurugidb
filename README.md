@@ -64,7 +64,7 @@ out:
 | ---------------------- | ---- | -------------------------------------------------- |
 | `insert`               | SQL  | Insert and wait for insert completion all at once. |
 | `insert_wait`          | SQL  | Insert and wait for each insert to complete.       |
-| `insert_multi_values`  | SQL  | Insert with multiple values.                       |
+| `insert_multi_values`  | SQL  | Insert with multiple values. (ver 1.0.1)           |
 | `insert_batch`         | SQL  | Insert using batch API.                            |
 | `put`                  | KVS  | Put and wait for put completion all at once.       |
 | `put_wait`             | KVS  | Put and wait for each put to complete.             |
@@ -86,17 +86,17 @@ out:
 
 1. install plugin
    ```
-   $ java -jar embulk-0.11.3.jar install io.github.hishidama.embulk:embulk-output-tsurugidb:1.0.0
+   $ java -jar embulk-0.11.3.jar install io.github.hishidama.embulk:embulk-output-tsurugidb:1.0.1
    ```
 
 2. add setting to $HOME/.embulk/embulk.properties
    ```
-   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:1.0.0
+   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:1.0.1
    ```
 
 | version       | Tsurugi     | Tsubakuro |
 |---------------|-------------|-----------|
-| 1.0.0         | 1.0.0       | 1.6.0     |
+| 1.0.0 - 1.0.1 | 1.0.0       | 1.6.0     |
 | 0.1.7         | 1.0.0-BETA6 | 1.5.0     |
 | 0.1.6         | 1.0.0-BETA5 | 1.4.0     |
 | 0.1.5         | 1.0.0-BETA4 | 1.3.0     |
