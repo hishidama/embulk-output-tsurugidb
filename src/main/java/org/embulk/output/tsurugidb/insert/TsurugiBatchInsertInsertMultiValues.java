@@ -23,6 +23,7 @@ import org.embulk.output.tsurugidb.common.MergeConfig;
 import org.embulk.output.tsurugidb.common.TableIdentifier;
 import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor;
 import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor.MultiValues;
+import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor.PsCache;
 
 import com.tsurugidb.tsubakuro.exception.ServerException;
 import com.tsurugidb.tsubakuro.sql.Parameters;
@@ -32,8 +33,7 @@ public class TsurugiBatchInsertInsertMultiValues extends TsurugiBatchInsert {
     private static final int PARAMETER_MAX = 5000;
 
     protected TsurugiSqlExecutor executor;
-    private TableIdentifier loadTable;
-    private TsurugiTableSchema insertSchema;
+    private PsCache psCache;
     private int columnSize;
 
     private final List<MultiValues> valuesList = new ArrayList<>();
@@ -48,8 +48,7 @@ public class TsurugiBatchInsertInsertMultiValues extends TsurugiBatchInsert {
     @Override
     public void prepare(TableIdentifier loadTable, TsurugiTableSchema insertSchema, TsurugiOutputConnection connection) throws ServerException {
         this.executor = connection.getSqlExecutor();
-        this.loadTable = loadTable;
-        this.insertSchema = insertSchema;
+        this.psCache = executor.createPsCache(loadTable, insertSchema, mergeConfig);
         this.columnSize = insertSchema.getCount();
     }
 
@@ -88,12 +87,16 @@ public class TsurugiBatchInsertInsertMultiValues extends TsurugiBatchInsert {
     @Override
     @OverridingMethodsMustInvokeSuper
     public void close() throws ServerException {
-        super.close();
+        try {
+            psCache.close();
+        } finally {
+            super.close();
+        }
     }
 
     @Override
     protected int[] executeBatch() throws IOException, ServerException {
-        return executor.executeInsertMutliValues(loadTable, insertSchema, mergeConfig, valuesList, recordCount);
+        return executor.executeInsertMutliValues(psCache, valuesList, recordCount);
     }
 
     @Override

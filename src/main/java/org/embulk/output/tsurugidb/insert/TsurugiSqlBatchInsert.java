@@ -48,7 +48,7 @@ public abstract class TsurugiSqlBatchInsert extends TsurugiBatchInsert {
     }
 
     protected PreparedStatement prepareStatement(TableIdentifier loadTable, TsurugiTableSchema insertSchema) throws ServerException {
-        return executor.prepareBatchInsertStatement(loadTable, insertSchema, mergeConfig, -1);
+        return executor.prepareBatchInsertStatement(loadTable, insertSchema, mergeConfig, -1, true);
     }
 
     @Override

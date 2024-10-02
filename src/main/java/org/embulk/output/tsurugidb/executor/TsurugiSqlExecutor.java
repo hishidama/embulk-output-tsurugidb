@@ -5,6 +5,7 @@ import java.io.UncheckedIOException;
 import java.text.MessageFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -186,7 +187,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         return count;
     }
 
-    public PreparedStatement prepareBatchInsertStatement(TableIdentifier toTable, TsurugiTableSchema toTableSchema, Optional<MergeConfig> mergeConfig, int valuesSize) throws ServerException {
+    public PreparedStatement prepareBatchInsertStatement(TableIdentifier toTable, TsurugiTableSchema toTableSchema, Optional<MergeConfig> mergeConfig, int valuesSize, boolean sqlLog)
+            throws ServerException {
         String sql;
         if (mergeConfig.isPresent()) {
             if (valuesSize > 0) {
@@ -196,11 +198,13 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         } else {
             sql = buildPreparedInsertSql(toTable, toTableSchema, valuesSize);
         }
-        final int SQL_INFO_LENGTH = 1024;
-        if (sql.length() <= SQL_INFO_LENGTH) {
-            logger.info("Prepared SQL: {}", sql);
-        } else {
-            logger.info("Prepared SQL: {}...", sql.substring(0, SQL_INFO_LENGTH));
+        if (sqlLog) {
+            final int SQL_INFO_LENGTH = 1024;
+            if (sql.length() <= SQL_INFO_LENGTH) {
+                logger.info("Prepared SQL: {}", sql);
+            } else {
+                logger.info("Prepared SQL: {}...", sql.substring(0, SQL_INFO_LENGTH));
+            }
         }
 
         var placeholders = new ArrayList<Placeholder>();
@@ -594,21 +598,53 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         }
     }
 
-    public int[] executeInsertMutliValues(TableIdentifier loadTable, TsurugiTableSchema insertSchema, Optional<MergeConfig> mergeConfig, List<MultiValues> valuesList, int recordCount)
-            throws IOException, ServerException {
+    public class PsCache implements AutoCloseable {
+        private final TableIdentifier loadTable;
+        private final TsurugiTableSchema insertSchema;
+        private final Optional<MergeConfig> mergeConfig;
+        private final Map<Integer, PreparedStatement> psMap = new HashMap<>();
+        private boolean sqlLog = true;
+
+        public PsCache(TableIdentifier loadTable, TsurugiTableSchema insertSchema, Optional<MergeConfig> mergeConfig) {
+            this.loadTable = loadTable;
+            this.insertSchema = insertSchema;
+            this.mergeConfig = mergeConfig;
+        }
+
+        public PreparedStatement getPs(int valuesCount) throws ServerException {
+            var ps = psMap.get(valuesCount);
+            if (ps == null) {
+                ps = prepareBatchInsertStatement(loadTable, insertSchema, mergeConfig, valuesCount, sqlLog);
+                psMap.put(valuesCount, ps);
+                sqlLog = false;
+            }
+            return ps;
+        }
+
+        @Override
+        public void close() {
+            for (var ps : psMap.values()) {
+                try {
+                    ps.close();
+                } catch (Exception e) {
+                    logger.warn("psCache close error", e);
+                }
+            }
+        }
+    }
+
+    public PsCache createPsCache(TableIdentifier loadTable, TsurugiTableSchema insertSchema, Optional<MergeConfig> mergeConfig) {
+        return new PsCache(loadTable, insertSchema, mergeConfig);
+    }
+
+    public int[] executeInsertMutliValues(PsCache psCache, List<MultiValues> valuesList, int recordCount) throws IOException, ServerException {
         var futures = new Futures(valuesList.size(), recordCount, i -> valuesList.get(i).parameterList);
         try (futures) {
             var tx = getTransaction();
             for (var values : valuesList) {
-                try (var ps = prepareBatchInsertStatement(loadTable, insertSchema, mergeConfig, values.recordCount)) {
-                    var future = tx.executeStatement(ps, values.parameterList);
-                    futures.add(future);
-                } catch (ServerException e) {
-                    boolean isStop = isStop(e);
-                    if (isStop) {
-                        throw e;
-                    }
-                }
+                var ps = psCache.getPs(values.recordCount);
+                var future = tx.executeStatement(ps, values.parameterList);
+                futures.add(future);
             }
         } catch (InterruptedException | TimeoutException e) {
             throw new RuntimeException(e);
