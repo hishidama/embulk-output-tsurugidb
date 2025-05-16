@@ -2,7 +2,6 @@ package org.embulk.output.tsurugidb;
 
 import java.util.ArrayList;
 
-import org.embulk.output.tsurugidb.option.TsurugiSessionShutdownType;
 import org.junit.Before;
 import org.junit.Test;
 

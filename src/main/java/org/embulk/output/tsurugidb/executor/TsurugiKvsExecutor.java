@@ -82,7 +82,7 @@ public class TsurugiKvsExecutor implements AutoCloseable {
             throw new ConfigException("unsupported tx_type(" + txType + "). choose from OCC,LTX,RTX");
         }
 
-//TODO Tsurugi        builder.withLabel(task.getTxLabel());
+//TODO Tsurugi KVS       builder.withLabel(task.getTxLabel());
         return builder.build();
     }
 

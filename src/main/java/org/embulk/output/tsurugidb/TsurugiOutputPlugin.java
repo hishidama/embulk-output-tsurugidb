@@ -987,21 +987,21 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         for (var column : metadata.getColumns()) {
             String columnName = column.getName();
             var sqlType = column.getAtomType();
-            // TODO Tsurugi column metadata
-            String simpleTypeName = sqlType.toString();
+            String simpleTypeName = TsurugiColumn.getSimpleTypeName(column);
+            // TODO Tsurugi primary key
 //          boolean isUniqueKey = primaryKeys.contains(columnName);
             boolean isUniqueKey = false;
 //          int colSize = rs.getInt("COLUMN_SIZE");
-            int colSize = 0;
+            int colSize = TsurugiColumn.getColumnSize(column);
 //          int decDigit = rs.getInt("DECIMAL_DIGITS");
 //          if (rs.wasNull()) {
 //              decDigit = -1;
 //          }
-            int decDigit = 0;
+            int decDigit = TsurugiColumn.getScale(column);
 //          int charOctetLength = rs.getInt("CHAR_OCTET_LENGTH");
-            int charOctetLength = 0;
+            int charOctetLength = TsurugiColumn.getLength(column);
 //          boolean isNotNull = "NO".equals(rs.getString("IS_NULLABLE"));
-            boolean isNotNull = false;
+            boolean isNotNull = TsurugiColumn.isNotNull(column);
 
             columns.add(TsurugiColumn.newGenericTypeColumn(i, columnName, sqlType, simpleTypeName, colSize, decDigit, charOctetLength, isNotNull, isUniqueKey));
             i++;
