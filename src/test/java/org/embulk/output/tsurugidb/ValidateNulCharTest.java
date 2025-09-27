@@ -113,6 +113,7 @@ public class ValidateNulCharTest extends TsurugiTestTool {
             var out = tester.newConfigSource();
             out.set("type", TsurugiOutputPlugin.TYPE);
             out.set("endpoint", ENDPOINT);
+            setCredential(out);
             out.set("table", TEST);
             if (txType != null) {
                 out.set("tx_type", txType);

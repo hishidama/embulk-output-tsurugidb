@@ -55,6 +55,7 @@ public class SessionShutdownTest extends TsurugiTestTool {
             var out = tester.newConfigSource();
             out.set("type", TsurugiOutputPlugin.TYPE);
             out.set("endpoint", ENDPOINT);
+            setCredential(out);
             out.set("table", TEST);
             out.set("session_shutdown_type", shutdownType.toString());
 

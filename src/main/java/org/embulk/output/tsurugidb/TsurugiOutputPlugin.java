@@ -99,6 +99,14 @@ public class TsurugiOutputPlugin implements OutputPlugin {
         @ConfigDefault("null")
         public Optional<String> getPassword();
 
+        @Config("auth_token")
+        @ConfigDefault("null")
+        public Optional<String> getAuthToken();
+
+        @Config("credentials")
+        @ConfigDefault("null")
+        public Optional<String> getCredentials();
+
         @Config("tx_type")
         @ConfigDefault("\"LTX\"") // OCC, LTX
         public String getTxType();
