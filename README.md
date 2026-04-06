@@ -91,12 +91,12 @@ out:
 
 1. install plugin
    ```
-   $ java -jar embulk-0.11.3.jar install io.github.hishidama.embulk:embulk-output-tsurugidb:1.9.0
+   $ java -jar embulk-0.11.3.jar install io.github.hishidama.embulk:embulk-output-tsurugidb:1.10.0
    ```
 
 2. add setting to $HOME/.embulk/embulk.properties
    ```
-   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:1.9.0
+   plugins.output.tsurugidb=maven:io.github.hishidama.embulk:tsurugidb:1.10.0
    ```
 
 | version       | Tsurugi       | Tsubakuro |
@@ -105,7 +105,7 @@ out:
 | 1.1.0         | 1.1.0 - 1.2.0 | 1.7.0     |
 | 1.3.0         | 1.3.0         | 1.8.0     |
 | ...           | ...           | ...       |
-| 1.9.0         | 1.9.0         | 1.14.0    |
+| 1.10.0        | 1.10.0        | 1.15.0    |
 
 
 ## Build
