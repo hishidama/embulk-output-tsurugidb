@@ -15,8 +15,8 @@ import java.util.Optional;
 
 import org.embulk.output.tsurugidb.TsurugiOutputConnection;
 import org.embulk.output.tsurugidb.TsurugiOutputConnector;
-import org.embulk.output.tsurugidb.TsurugiTableSchema;
 import org.embulk.output.tsurugidb.TsurugiOutputPlugin.PluginTask;
+import org.embulk.output.tsurugidb.TsurugiTableSchema;
 import org.embulk.output.tsurugidb.common.MergeConfig;
 import org.embulk.output.tsurugidb.common.TableIdentifier;
 import org.embulk.output.tsurugidb.executor.TsurugiKvsExecutor;
@@ -36,7 +36,8 @@ public abstract class TsurugiKvsBatchInsert extends TsurugiBatchInsert {
     }
 
     @Override
-    public void prepare(TableIdentifier loadTable, TsurugiTableSchema insertSchema, TsurugiOutputConnection connection) throws ServerException {
+    public void prepare(TableIdentifier loadTable, TsurugiTableSchema insertSchema, TsurugiOutputConnection connection)
+            throws ServerException {
         this.tableName = loadTable.getTableName();
         this.executor = connection.getKvsExecutor();
     }
@@ -153,7 +154,9 @@ public abstract class TsurugiKvsBatchInsert extends TsurugiBatchInsert {
     @Override
     public void setDate(String bindName, final Instant v, final ZoneId zoneId) {
         // JavaDoc of java.sql.Time says:
-        // >> To conform with the definition of SQL DATE, the millisecond values wrapped by a java.sql.Date instance must be 'normalized' by setting the hours, minutes, seconds, and milliseconds to
+        // >> To conform with the definition of SQL DATE, the millisecond values wrapped
+        // by a java.sql.Date instance must be 'normalized' by setting the hours,
+        // minutes, seconds, and milliseconds to
         // zero in the particular time zone with which the instance is associated.
         var date = LocalDate.ofInstant(v, zoneId);
         record.add(bindName, date);
@@ -186,5 +189,14 @@ public abstract class TsurugiKvsBatchInsert extends TsurugiBatchInsert {
         var dateTime = OffsetDateTime.ofInstant(v, zoneId);
         record.add(bindName, dateTime);
         nextColumn(32);
+    }
+
+    @Override
+    public void setClob(String bindName, String v) {
+        throw new UnsupportedOperationException("TsurugiKvsBatchInsert#setClob() not supported");
+//        checkNulChar(bindName, v);
+//        record.add(bindName, v);
+//        // estimate all chracters use 2 bytes; almost enough for the worst case
+//        nextColumn(v.length() * 2 + 4);
     }
 }

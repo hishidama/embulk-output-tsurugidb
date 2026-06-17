@@ -47,15 +47,20 @@ public class ColumnSetterFactory {
         case "boolean":
             return new BooleanColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option));
         case "string":
-            return new StringColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), newTimestampFormatter(option));
+            return new StringColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    newTimestampFormatter(option));
         case "nstring":
-            return new NStringColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), newTimestampFormatter(option));
+            return new NStringColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    newTimestampFormatter(option));
         case "date":
-            return new DateColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new DateColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         case "time":
-            return new TimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new TimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         case "timestamp":
-            return new DateTimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new DateTimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         case "decimal":
             return new DecimalColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option));
         case "json":
@@ -63,9 +68,11 @@ public class ColumnSetterFactory {
         case "null":
             return new NullColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option));
         case "pass":
-            return new PassThroughColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new PassThroughColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         default:
-            throw new ConfigException(String.format("Unknown value_type '%s' for column '%s'", option.getValueType(), column.getName()));
+            throw new ConfigException(
+                    String.format("Unknown value_type '%s' for column '%s'", option.getValueType(), column.getName()));
         }
     }
 
@@ -94,17 +101,26 @@ public class ColumnSetterFactory {
         case DECIMAL:
             return new DecimalColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option));
         case CHARACTER:
-            return new StringColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), newTimestampFormatter(option));
+            return new StringColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    newTimestampFormatter(option));
         case DATE:
-            return new DateColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new DateColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         case TIME_OF_DAY:
-            return new TimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new TimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         case TIME_POINT:
-            return new DateTimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new DateTimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         case TIME_OF_DAY_WITH_TIME_ZONE:
-            return new OffsetTimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new OffsetTimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    getTimeZone(option));
         case TIME_POINT_WITH_TIME_ZONE:
-            return new OffsetDateTimeColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+            return new OffsetDateTimeColumnSetter(bindName, batch, column,
+                    newDefaultValueSetter(bindName, column, option), getTimeZone(option));
+        case CLOB:
+            return new ClobColumnSetter(bindName, batch, column, newDefaultValueSetter(bindName, column, option),
+                    newTimestampFormatter(option));
         default:
             throw unsupportedOperationException(column);
         }
@@ -122,7 +138,11 @@ public class ColumnSetterFactory {
     // };
 
     private static UnsupportedOperationException unsupportedOperationException(TsurugiColumn column) {
-        throw new UnsupportedOperationException(String.format("Unsupported type %s (sqlType=%d, size=%d, scale=%d)", column.getDeclaredType().orElse(column.getSimpleTypeName()), column.getSqlType(),
-                column.getSizeTypeParameter(), column.getScaleTypeParameter()));
+        String type = column.getDeclaredType().orElse(column.getSimpleTypeName());
+        var sqlType = column.getSqlType();
+        int size = column.getSizeTypeParameter();
+        int scale = column.getScaleTypeParameter();
+        throw new UnsupportedOperationException(
+                String.format("Unsupported type %s (sqlType=%s, size=%d, scale=%d)", type, sqlType, size, scale));
     }
 }

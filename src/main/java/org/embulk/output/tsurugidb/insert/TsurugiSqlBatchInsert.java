@@ -1,6 +1,7 @@
 package org.embulk.output.tsurugidb.insert;
 
 import java.io.IOException;
+import java.io.StringReader;
 import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.time.Instant;
@@ -18,13 +19,14 @@ import javax.annotation.OverridingMethodsMustInvokeSuper;
 
 import org.embulk.output.tsurugidb.TsurugiOutputConnection;
 import org.embulk.output.tsurugidb.TsurugiOutputConnector;
-import org.embulk.output.tsurugidb.TsurugiTableSchema;
 import org.embulk.output.tsurugidb.TsurugiOutputPlugin.PluginTask;
+import org.embulk.output.tsurugidb.TsurugiTableSchema;
 import org.embulk.output.tsurugidb.common.MergeConfig;
 import org.embulk.output.tsurugidb.common.TableIdentifier;
 import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor;
 
 import com.tsurugidb.sql.proto.SqlRequest.Parameter;
+import com.tsurugidb.tsubakuro.common.LargeObjectInfo;
 import com.tsurugidb.tsubakuro.exception.ServerException;
 import com.tsurugidb.tsubakuro.sql.Parameters;
 import com.tsurugidb.tsubakuro.sql.PreparedStatement;
@@ -42,12 +44,14 @@ public abstract class TsurugiSqlBatchInsert extends TsurugiBatchInsert {
     }
 
     @Override
-    public void prepare(TableIdentifier loadTable, TsurugiTableSchema insertSchema, TsurugiOutputConnection connection) throws ServerException {
+    public void prepare(TableIdentifier loadTable, TsurugiTableSchema insertSchema, TsurugiOutputConnection connection)
+            throws ServerException {
         this.executor = connection.getSqlExecutor();
         this.batch = prepareStatement(loadTable, insertSchema);
     }
 
-    protected PreparedStatement prepareStatement(TableIdentifier loadTable, TsurugiTableSchema insertSchema) throws ServerException {
+    protected PreparedStatement prepareStatement(TableIdentifier loadTable, TsurugiTableSchema insertSchema)
+            throws ServerException {
         return executor.prepareBatchInsertStatement(loadTable, insertSchema, mergeConfig, -1, true);
     }
 
@@ -176,7 +180,9 @@ public abstract class TsurugiSqlBatchInsert extends TsurugiBatchInsert {
     @Override
     public void setDate(String bindName, final Instant v, final ZoneId zoneId) {
         // JavaDoc of java.sql.Time says:
-        // >> To conform with the definition of SQL DATE, the millisecond values wrapped by a java.sql.Date instance must be 'normalized' by setting the hours, minutes, seconds, and milliseconds to
+        // >> To conform with the definition of SQL DATE, the millisecond values wrapped
+        // by a java.sql.Date instance must be 'normalized' by setting the hours,
+        // minutes, seconds, and milliseconds to
         // zero in the particular time zone with which the instance is associated.
         record.add(Parameters.of(bindName, LocalDate.ofInstant(v, zoneId)));
         nextColumn(32);
@@ -204,5 +210,25 @@ public abstract class TsurugiSqlBatchInsert extends TsurugiBatchInsert {
     public void setOffsetDateTime(String bindName, final Instant v, final ZoneId zoneId) {
         record.add(Parameters.of(bindName, OffsetDateTime.ofInstant(v, zoneId)));
         nextColumn(32);
+    }
+
+    @Override
+    public void setClob(String bindName, String v) {
+        LargeObjectInfo clob;
+        try {
+            var lobClient = executor.getSession().getLargeObjectClient();
+            try (var reader = new StringReader(v)) {
+                clob = lobClient.upload(reader).await();
+            } catch (ServerException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e.getMessage(), e);
+        }
+
+        checkNulChar(bindName, v);
+        record.add(Parameters.clobOf(bindName, clob));
+        // estimate all chracters use 2 bytes; almost enough for the worst case
+        nextColumn(v.length() * 2 + 4);
     }
 }

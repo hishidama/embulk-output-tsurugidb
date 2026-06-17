@@ -101,8 +101,10 @@ public class TsurugiSqlExecutor implements AutoCloseable {
             try {
                 priority = TransactionPriority.valueOf(s.toUpperCase());
             } catch (Exception e) {
-                var ce = new ConfigException(MessageFormat.format("Unknown tx_priority ''{0}''. Supported tx_priority are {1}", //
-                        s, Arrays.stream(TransactionPriority.values()).map(TransactionPriority::toString).map(String::toLowerCase).collect(Collectors.joining(", "))));
+                var ce = new ConfigException(
+                        MessageFormat.format("Unknown tx_priority ''{0}''. Supported tx_priority are {1}", //
+                                s, Arrays.stream(TransactionPriority.values()).map(TransactionPriority::toString)
+                                        .map(String::toLowerCase).collect(Collectors.joining(", "))));
                 ce.addSuppressed(e);
                 throw ce;
             }
@@ -111,6 +113,7 @@ public class TsurugiSqlExecutor implements AutoCloseable {
     }
 
     private final PluginTask task;
+    private final Session session;
     private final SqlClient sqlClient;
     private final TransactionOption txOption;
     private final CommitStatus commitStatus;
@@ -118,12 +121,18 @@ public class TsurugiSqlExecutor implements AutoCloseable {
     private Transaction transaction;
     protected String identifierQuoteString = "\"";
 
-    public TsurugiSqlExecutor(PluginTask task, Session session, TransactionOption txOption, CommitStatus commitStatus, boolean autoCommit) {
+    public TsurugiSqlExecutor(PluginTask task, Session session, TransactionOption txOption, CommitStatus commitStatus,
+            boolean autoCommit) {
         this.task = task;
+        this.session = session;
         this.sqlClient = SqlClient.attach(session);
         this.txOption = txOption;
         this.commitStatus = commitStatus;
         this.autoCommit = autoCommit;
+    }
+
+    public Session getSession() {
+        return this.session;
     }
 
     protected synchronized Transaction getTransaction() throws ServerException {
@@ -187,8 +196,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         return count;
     }
 
-    public PreparedStatement prepareBatchInsertStatement(TableIdentifier toTable, TsurugiTableSchema toTableSchema, Optional<MergeConfig> mergeConfig, int valuesSize, boolean sqlLog)
-            throws ServerException {
+    public PreparedStatement prepareBatchInsertStatement(TableIdentifier toTable, TsurugiTableSchema toTableSchema,
+            Optional<MergeConfig> mergeConfig, int valuesSize, boolean sqlLog) throws ServerException {
         String sql;
         if (mergeConfig.isPresent()) {
             if (valuesSize > 0) {
@@ -314,7 +323,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
     }
 
     protected String quoteIdentifierString(String str, String quoteString) {
-        // TODO if identifierQuoteString.equals(" ") && str.contains([^a-zA-Z0-9_connection.getMetaData().getExtraNameCharacters()])
+        // TODO if identifierQuoteString.equals(" ") &&
+        // str.contains([^a-zA-Z0-9_connection.getMetaData().getExtraNameCharacters()])
         // TODO if str.contains(identifierQuoteString);
         return quoteString + str + quoteString;
     }
@@ -355,7 +365,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         return true;
     }
 
-    protected String buildPreparedMergeSql(TableIdentifier toTable, TsurugiTableSchema toTableSchema, MergeConfig mergeConfig) {
+    protected String buildPreparedMergeSql(TableIdentifier toTable, TsurugiTableSchema toTableSchema,
+            MergeConfig mergeConfig) {
         throw new UnsupportedOperationException("not implemented");
     }
 
@@ -370,7 +381,8 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         }
     }
 
-    public int[] executeInsertWait(PreparedStatement ps, List<List<Parameter>> list) throws IOException, ServerException {
+    public int[] executeInsertWait(PreparedStatement ps, List<List<Parameter>> list)
+            throws IOException, ServerException {
         var result = new int[list.size()];
 
         var tx = getTransaction();
@@ -451,15 +463,19 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         }
         if (isStop) {
             if (withStackTrace) {
-                logMethod.accept("{} occurred. message={}, parameter={}", new Object[] { code, e.getMessage(), parameter, e });
+                logMethod.accept("{} occurred. message={}, parameter={}",
+                        new Object[] { code, e.getMessage(), parameter, e });
             } else {
-                logMethod.accept("{} occurred. message={}, parameter={}", new Object[] { code, e.getMessage(), parameter });
+                logMethod.accept("{} occurred. message={}, parameter={}",
+                        new Object[] { code, e.getMessage(), parameter });
             }
         } else {
             if (withStackTrace) {
-                logMethod.accept("skipped {}. message={}, parameter={}", new Object[] { code, e.getMessage(), parameter, e });
+                logMethod.accept("skipped {}. message={}, parameter={}",
+                        new Object[] { code, e.getMessage(), parameter, e });
             } else {
-                logMethod.accept("skipped {}. message={}, parameter={}", new Object[] { code, e.getMessage(), parameter });
+                logMethod.accept("skipped {}. message={}, parameter={}",
+                        new Object[] { code, e.getMessage(), parameter });
             }
         }
     }
@@ -633,11 +649,13 @@ public class TsurugiSqlExecutor implements AutoCloseable {
         }
     }
 
-    public PsCache createPsCache(TableIdentifier loadTable, TsurugiTableSchema insertSchema, Optional<MergeConfig> mergeConfig) {
+    public PsCache createPsCache(TableIdentifier loadTable, TsurugiTableSchema insertSchema,
+            Optional<MergeConfig> mergeConfig) {
         return new PsCache(loadTable, insertSchema, mergeConfig);
     }
 
-    public int[] executeInsertMutliValues(PsCache psCache, List<MultiValues> valuesList, int recordCount) throws IOException, ServerException {
+    public int[] executeInsertMutliValues(PsCache psCache, List<MultiValues> valuesList, int recordCount)
+            throws IOException, ServerException {
         var futures = new Futures(valuesList.size(), recordCount, i -> valuesList.get(i).parameterList);
         try (futures) {
             var tx = getTransaction();

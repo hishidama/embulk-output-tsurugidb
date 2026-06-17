@@ -1,6 +1,8 @@
 package org.embulk.output.tsurugidb.insert;
 
 import java.io.IOException;
+import java.io.StringReader;
+import java.io.UncheckedIOException;
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.time.LocalDate;
@@ -25,6 +27,7 @@ import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor;
 import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor.MultiValues;
 import org.embulk.output.tsurugidb.executor.TsurugiSqlExecutor.PsCache;
 
+import com.tsurugidb.tsubakuro.common.LargeObjectInfo;
 import com.tsurugidb.tsubakuro.exception.ServerException;
 import com.tsurugidb.tsubakuro.sql.Parameters;
 
@@ -41,12 +44,14 @@ public class TsurugiBatchInsertInsertMultiValues extends TsurugiBatchInsert {
     private int recordCount = 0;
     private int bindNameIndex = 0;
 
-    public TsurugiBatchInsertInsertMultiValues(PluginTask task, TsurugiOutputConnector connector, Optional<MergeConfig> mergeConfig) {
+    public TsurugiBatchInsertInsertMultiValues(PluginTask task, TsurugiOutputConnector connector,
+            Optional<MergeConfig> mergeConfig) {
         super(task, connector, mergeConfig);
     }
 
     @Override
-    public void prepare(TableIdentifier loadTable, TsurugiTableSchema insertSchema, TsurugiOutputConnection connection) throws ServerException {
+    public void prepare(TableIdentifier loadTable, TsurugiTableSchema insertSchema, TsurugiOutputConnection connection)
+            throws ServerException {
         this.executor = connection.getSqlExecutor();
         this.psCache = executor.createPsCache(loadTable, insertSchema, mergeConfig);
         this.columnSize = insertSchema.getCount();
@@ -200,7 +205,9 @@ public class TsurugiBatchInsertInsertMultiValues extends TsurugiBatchInsert {
     public void setDate(String bindName, final Instant v, final ZoneId zoneId) {
         bindName += "_" + bindNameIndex;
         // JavaDoc of java.sql.Time says:
-        // >> To conform with the definition of SQL DATE, the millisecond values wrapped by a java.sql.Date instance must be 'normalized' by setting the hours, minutes, seconds, and milliseconds to
+        // >> To conform with the definition of SQL DATE, the millisecond values wrapped
+        // by a java.sql.Date instance must be 'normalized' by setting the hours,
+        // minutes, seconds, and milliseconds to
         // zero in the particular time zone with which the instance is associated.
         values.add(Parameters.of(bindName, LocalDate.ofInstant(v, zoneId)));
         nextColumn(32);
@@ -232,5 +239,26 @@ public class TsurugiBatchInsertInsertMultiValues extends TsurugiBatchInsert {
         bindName += "_" + bindNameIndex;
         values.add(Parameters.of(bindName, OffsetDateTime.ofInstant(v, zoneId)));
         nextColumn(32);
+    }
+
+    @Override
+    public void setClob(String bindName, String v) {
+        LargeObjectInfo clob;
+        try {
+            var lobClient = executor.getSession().getLargeObjectClient();
+            try (var reader = new StringReader(v)) {
+                clob = lobClient.upload(reader).await();
+            } catch (ServerException | InterruptedException e) {
+                throw new RuntimeException(e);
+            }
+        } catch (IOException e) {
+            throw new UncheckedIOException(e.getMessage(), e);
+        }
+
+        bindName += "_" + bindNameIndex;
+        checkNulChar(bindName, v);
+        values.add(Parameters.clobOf(bindName, clob));
+        // estimate all chracters use 2 bytes; almost enough for the worst case
+        nextColumn(v.length() * 2 + 4);
     }
 }

@@ -62,4 +62,6 @@ public interface BatchInsert {
     public void setOffsetTime(String bindName, Instant v, ZoneId zoneId);
 
     public void setOffsetDateTime(String bindName, Instant v, ZoneId zoneId);
+
+    public void setClob(String bindName, String v);
 }
